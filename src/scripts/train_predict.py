@@ -40,6 +40,7 @@ def main(parser):
     # Check if the model directory is provided or mantain the default Hugging Face model name 
     if model_dir != "":
         model_name = os.getcwd() + model_dir
+        print(model_name)
 
     df_train=  load_all_data(general_args["train_file"], label_to_exclude, general_args["label"],
                                                   general_args["filter_label"], general_args["filter_label_value"], feature_name=general_args["features_name"],
@@ -54,7 +55,8 @@ def main(parser):
             os.environ["WANDB_PROJECT"] = general_args["WANDB_PROJECT"]  # name your W&B project
             os.environ["WANDB_LOG_MODEL"] = general_args["WANDB_LOG_MODEL"]  # log all model checkpoints
             wandb.login()
-        
+            #training_args.update(wandb.config)
+
         if training_args["do_eval"]:
             if general_args["eval_file"] != "":
                 df_eval = load_all_data(general_args["eval_file"], label_to_exclude, general_args["label"],
@@ -80,23 +82,13 @@ def main(parser):
         })
         
         if "class_weights" in general_args:
-            # df_train = df_train.dropna(subset=['labels'])
-            # print(f"[INFO] Tamaño original del dataset de entrenamiento: {len(df_train)}")
-
-            # df_train = df_train.dropna(subset=["labels"])
-            # df_train["labels"] = df_train["labels"].astype(int)  # asegurar que son enteros
-
-            # print(f"[INFO] Tamaño después de eliminar NaN en labels: {len(df_train)}")
-            # print(f"[INFO] Clases únicas en labels: {np.unique(df_train['labels'].values)}")
             weights = compute_class_weight(class_weight="balanced", classes=np.unique(df_train['labels'].values),
                                            y=df_train['labels'].values)
 
-            print("Clases únicas:", np.unique(df_train['labels'].values))
-            print("Peso por clase:", weights)
-
+            # print("Clases únicas:", np.unique(df_train['labels'].values))
+            # print("Peso por clase:", weights)
             
             general_args["class_weights"] = weights.tolist()
-            # weights_str = [str(numero) for numero in weights.tolist()]
         
         model = ClassificationModel(model_name, training_args, dataset_dict, general_args)
         model.train()
@@ -114,6 +106,8 @@ def main(parser):
         model = ClassificationModel(model_name, training_args, dataset_dict, general_args)
         
     if training_args["do_predict"]:
+        print("Predicting...")
+
         preds = model.predict()
         df_pred = pd.DataFrame(preds, columns=['labels'])
         

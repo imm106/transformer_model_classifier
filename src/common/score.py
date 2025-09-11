@@ -1,15 +1,13 @@
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import classification_report
-
+from sklearn.metrics import f1_score
 
 plt.style.use('ggplot')
 
 
 
 def scorePredict(y_test, y_hat, labels):
-    from sklearn.metrics import f1_score
-
     matriz = confusion_matrix(y_test, y_hat, labels=labels)
     f1_score_value = f1_score(y_test, y_hat, average='macro')
     value_class = classification_report(y_test, y_hat, digits=5)
