@@ -35,17 +35,28 @@ class WeightedLossTrainer(Trainer):
 
 class ClassificationModel:
     def __init__(self, model_id, training_args, dataset_dict, general_args):
+        print(model_id)
         self.tokenizer = AutoTokenizer.from_pretrained(model_id)
         if self.tokenizer.pad_token is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
         self.label_encoder = None
         self.general_args = general_args
-        self.tokenized_datasets = dataset_dict.map(
-            self.preprocessing_function, batched=True
-        )
+
         
         self.class_weights = torch.Tensor(general_args["class_weights"])
-        config = AutoConfig.from_pretrained(model_id, pad_token_id=self.tokenizer.pad_token_id)
+
+        unique_labels = sorted(set(dataset_dict["train"]["labels"]))
+        self.id2label = {i: str(l) for i, l in enumerate(unique_labels)}
+        self.label2id = {str(l): i for i, l in enumerate(unique_labels)}
+
+
+        config = AutoConfig.from_pretrained(
+            model_id, 
+            num_labels=len(unique_labels),
+            id2label=self.id2label,
+            label2id=self.label2id,
+            pad_token_id=self.tokenizer.pad_token_id
+        )
         if self.label_encoder:
             config.num_labels = len(self.label_encoder.classes_)
         if "dropout_rate" in training_args:
@@ -58,16 +69,24 @@ class ClassificationModel:
         self.model = AutoModelForSequenceClassification.from_pretrained(
             model_id, config=config
         )
-        print(self.tokenized_datasets["train"])
         
+        self.tokenized_datasets = dataset_dict.map(
+            self.preprocessing_function, batched=True
+        )
+
         self.data_collator = DataCollatorWithPadding(tokenizer=self.tokenizer)
         self.trainer = None
 
     def label_encoding(self, examples):
+        examples = [self.label2id[example["label"]] for example in examples]
+        return examples
+
+    """def label_encoding(self, examples):
         if self.label_encoder is None:
             self.label_encoder = LabelEncoder()
             self.label_encoder.fit(examples["labels"])
         return self.label_encoder.transform(examples["labels"])
+    """
 
     def preprocessing_function(self, examples):
         if "text_b" in examples:
@@ -88,7 +107,8 @@ class ClassificationModel:
                 truncation=True,
             )
 
-        encoded["labels"] = self.label_encoding(examples)
+        #encoded["labels"] = self.label_encoding(examples)
+        encoded["labels"] = [self.label2id[label] for label in examples["labels"]]
         return encoded
 
     def train(self):
@@ -113,4 +133,10 @@ class ClassificationModel:
             )
         predictions = self.trainer.predict(self.tokenized_datasets["test"])
         preds = np.argmax(predictions.predictions, axis=-1)
-        return self.label_encoder.inverse_transform(preds)
+
+        pred_labels = [self.id2label[i] for i in preds]
+
+
+        return pred_labels
+
+        #return self.label_encoder.inverse_transform(preds)

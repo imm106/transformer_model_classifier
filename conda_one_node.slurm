@@ -22,4 +22,9 @@ set +a
 
 huggingface-cli login --token $HF_TOKEN
 
-python -m src.scripts.train_predict --config_path /config/constructividad/comment.json --model_arg /config/constructividad/comment_model.json
+#python -m src.scripts.train_predict --config_path /config/simplificacion/comment.json --model_arg /config/simplificacion/comment_model.json
+#python -m src.scripts.train_predict --config_path /config/fraude/comment.json --model_arg /config/fraude/comment_model.json --model_dir="/models/comment_fraude_sms_1/checkpoint-1076/"
+python -m src.scripts.upload_hf
+#python -m src.scripts.train_predict --config_path /config/simplificacion/comment.json --model_arg /config/simplificacion/comment_model.json --model_dir="/models/comment_simplificacion_3/checkpoint-2198/"
+
+#wandb agent rsepulveda/transformer_model_classifier/jigh6s0r
